@@ -20,20 +20,23 @@
 - 🎯 **Meta Mensal Inteligente:** Acompanhamento com barra de progresso dinâmica e valor restante.
 - 📱 **Instalável no Celular (PWA):** Funciona como aplicativo nativo e offline via Service Worker.
 - 📥 **Exportação para Excel:** Download dos dados do mês com um clique para declaração de imposto de renda ou controle pessoal.
+- 💳 **Checkout InfinitePay Integrado:** Cobrança automatizada via Pix e Cartão de Crédito para planos Mensal (R$ 9,90) e Anual (R$ 89,00).
+- ⚡ **Webhook Serverless:** Ativação automática e em tempo real do status PRO do motorista após a confirmação do pagamento.
 - 🌙 **Modo Escuro / Claro:** Alternância suave com persistência local.
 
 ---
 
 ## 🛠️ Configuração do Firebase para Produção
 
-Para ativar o sistema multi-usuário com segurança no Firebase Console:
+Projeto oficial: `kmpro-1627b`
 
 ### 1. Ativar Autenticação (Authentication)
-1. Acesse o [Firebase Console](https://console.firebase.google.com/) no seu projeto.
+1. Acesse o [Firebase Console](https://console.firebase.google.com/) no projeto `kmpro-1627b`.
 2. No menu lateral, clique em **Authentication** -> **Começar (Get started)**.
 3. Na aba **Sign-in method**, ative:
    - **Google** (adicione o e-mail de suporte).
    - **Email/Senha** (marque como ativado).
+4. Na aba **Settings** -> **Authorized domains**, adicione o domínio gerado na Vercel (ex: `kmpro.vercel.app`).
 
 ### 2. Configurar as Regras de Segurança do Firestore
 No menu lateral do Firebase Console:
@@ -49,13 +52,32 @@ service cloud.firestore {
   }
 }
 ```
-3. Clique em **Publicar (Publish)**. Agora cada motorista só consegue acessar e modificar suas próprias finanças.
+3. Clique em **Publicar (Publish)**.
+
+---
+
+## 💳 Configuração de Pagamento (InfinitePay + Vercel)
+
+O KMPRO já vem com rotas serverless na pasta `/api`:
+- `/api/create-checkout.js`: Gera o link de pagamento na InfinitePay apontando para a InfiniteTag `$lucasporcidonio`.
+- `/api/webhook-infinitepay.js`: Recebe a confirmação de pagamento da InfinitePay e atualiza o usuário para `isPro: true` no Firestore.
+
+### Variáveis de Ambiente na Vercel (Project Settings > Environment Variables):
+
+| Variável | Valor Padrão / Exemplo | Descrição |
+|---|---|---|
+| `INFINITEPAY_TAG` | `lucasporcidonio` | Sua InfiniteTag (sem o `$`) |
+| `FIREBASE_SERVICE_ACCOUNT` | Conteúdo do JSON da chave privada | Chave privada para o webhook atualizar o Firestore |
+
+> **Como obter o FIREBASE_SERVICE_ACCOUNT:**
+> 1. No Firebase Console, vá em **⚙️ Configurações do projeto** > **Contas de serviço (Service accounts)**.
+> 2. Clique em **Gerar nova chave privada**.
+> 3. Abra o arquivo `.json` baixado, copie todo o conteúdo e cole na variável de ambiente na Vercel.
 
 ---
 
 ## 📦 Como Publicar na Vercel
 
-1. Crie um repositório no seu GitHub chamado `kmpro`.
-2. Faça o push dos arquivos desta pasta.
-3. Acesse a [Vercel](https://vercel.com/) e importe o repositório `kmpro`.
-4. Deploy com 1 clique (como é HTML estático, não precisa de build command).
+1. Acesse a [Vercel](https://vercel.com/) e importe o repositório `lucasporcidonio-beep/KMPRO`.
+2. Em **Environment Variables**, adicione as variáveis acima.
+3. Clique em **Deploy**.

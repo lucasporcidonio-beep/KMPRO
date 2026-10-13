@@ -1,0 +1,10 @@
+{
+  "name": "kmpro",
+  "version": "1.0.0",
+  "description": "KMPRO - Micro-SaaS para motoristas de aplicativo",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}

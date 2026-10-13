@@ -229,9 +229,24 @@
                 <p class="text-xs text-gray-500 mt-1">Mais do que um app: a ferramenta de gestão para quem vive de app.</p>
             </div>
 
-            <div class="space-y-3 mb-6">
-                <div class="border-2 border-blue-500 bg-blue-50/50 rounded-xl p-4 relative cursor-pointer">
-                    <span class="absolute -top-2.5 right-4 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">POPULAR</span>
+            <!-- Card quando o usuário já for PRO -->
+            <div id="status-pro-banner" class="hidden mb-4 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-center">
+                <div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 mb-2">
+                    <i class="fas fa-crown text-lg"></i>
+                </div>
+                <h3 class="font-bold text-emerald-800 text-sm">Assinatura PRO Ativa!</h3>
+                <p id="status-pro-detalhes" class="text-xs text-emerald-700 mt-0.5">Seus benefícios estão 100% liberados.</p>
+            </div>
+
+            <!-- Feedback de Carregamento ao Clicar no Plano -->
+            <div id="checkout-loading" class="hidden mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-700 text-xs rounded-xl text-center font-medium">
+                <i class="fas fa-spinner fa-spin mr-2"></i> Conectando ao checkout seguro InfinitePay...
+            </div>
+
+            <div id="checkout-cards" class="space-y-3 mb-6">
+                <!-- Plano Anual -->
+                <div onclick="iniciarCheckout('anual')" class="border-2 border-blue-500 bg-blue-50/50 hover:bg-blue-100/50 rounded-xl p-4 relative cursor-pointer transition">
+                    <span class="absolute -top-2.5 right-4 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">POPULAR (ECONOMIZE 25%)</span>
                     <div class="flex justify-between items-center">
                         <div>
                             <p class="font-bold text-gray-800">Plano Anual</p>
@@ -244,7 +259,8 @@
                     </div>
                 </div>
 
-                <div class="border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-gray-300 transition">
+                <!-- Plano Mensal -->
+                <div onclick="iniciarCheckout('mensal')" class="border border-gray-200 hover:border-blue-400 hover:bg-blue-50/20 rounded-xl p-4 cursor-pointer transition">
                     <div class="flex justify-between items-center">
                         <div>
                             <p class="font-bold text-gray-800">Plano Mensal</p>
@@ -252,7 +268,7 @@
                         </div>
                         <div class="text-right">
                             <p class="text-lg font-bold text-gray-800">R$ 9,90</p>
-                            <p class="text-[10px] text-gray-400">por mês</p>
+                            <p class="text-[10px] text-gray-400">por mês via Pix/Cartão</p>
                         </div>
                     </div>
                 </div>
@@ -265,9 +281,9 @@
                 <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Suporte prioritário via WhatsApp</li>
             </ul>
 
-            <button onclick="alert('Em breve: integração direta com pagamento via Pix automático!')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-md">
+            <a href="https://wa.me/55?text=Ol%C3%A1%21%20Gostaria%20de%20tirar%20d%C3%BAvidas%20sobre%20o%20KMPRO" target="_blank" class="block text-center w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-md text-xs">
                 <i class="fab fa-whatsapp mr-1"></i> Falar com Suporte KMPRO
-            </button>
+            </a>
         </div>
     </div>
 
@@ -293,8 +309,8 @@
                     <input type="month" id="filtro-mes" class="border-0 focus:ring-0 text-gray-700 font-semibold cursor-pointer" onchange="atualizarInterface()">
                 </div>
 
-                <button onclick="abrirModalPlanos()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold px-3 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5">
-                    <i class="fas fa-crown"></i> <span>PRO</span>
+                <button id="btn-header-pro" onclick="abrirModalPlanos()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold px-3 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5">
+                    <i class="fas fa-crown"></i> <span id="btn-header-pro-text">PRO</span>
                 </button>
 
                 <button onclick="toggleDark()" class="bg-white p-2 w-10 h-10 rounded-lg shadow-sm text-gray-600 hover:text-blue-600 transition text-lg" title="Modo Escuro">
@@ -308,17 +324,17 @@
         </header>
 
         <!-- Banner de Período de Teste / Boas-vindas -->
-        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl p-4 mb-6 shadow-md flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div id="banner-usuario" class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl p-4 mb-6 shadow-md flex flex-col sm:flex-row items-center justify-between gap-3">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center text-lg">
-                    <i class="fas fa-bolt"></i>
+                    <i id="banner-icone" class="fas fa-bolt"></i>
                 </div>
                 <div>
-                    <p class="text-sm font-bold">KMPRO Ativo</p>
-                    <p class="text-xs text-blue-100">Seus dados estão sincronizados em tempo real na nuvem.</p>
+                    <p class="text-sm font-bold" id="banner-titulo">KMPRO Ativo</p>
+                    <p class="text-xs text-blue-100" id="banner-subtitulo">Seus dados estão sincronizados em tempo real na nuvem.</p>
                 </div>
             </div>
-            <button onclick="abrirModalPlanos()" class="bg-white text-blue-700 hover:bg-blue-50 text-xs font-bold px-4 py-2 rounded-lg transition whitespace-nowrap shadow-sm">
+            <button onclick="abrirModalPlanos()" id="btn-banner-acao" class="bg-white text-blue-700 hover:bg-blue-50 text-xs font-bold px-4 py-2 rounded-lg transition whitespace-nowrap shadow-sm">
                 Ver Planos e Vantagens
             </button>
         </div>
@@ -547,6 +563,8 @@
     let authTab = 'login';      // 'login' | 'register'
     let unsubscribeMeta = null;
     let unsubscribeLancamentos = null;
+    let unsubscribePerfil = null;
+    let usuarioPro = false;
 
     function getDataHoje() {
         const d = new Date();
@@ -580,8 +598,10 @@
             document.getElementById('app-screen').classList.add('hidden');
             if (unsubscribeMeta) unsubscribeMeta();
             if (unsubscribeLancamentos) unsubscribeLancamentos();
+            if (unsubscribePerfil) unsubscribePerfil();
             entradas = [];
             metaMensal = 0;
+            usuarioPro = false;
         }
     });
 
@@ -693,6 +713,61 @@
             snapshot.forEach(doc => entradas.push({ id: doc.id, ...doc.data() }));
             atualizarInterface();
         });
+
+        // Escuta o perfil e status de assinatura PRO em tempo real
+        if (unsubscribePerfil) unsubscribePerfil();
+        unsubscribePerfil = userRef.onSnapshot(doc => {
+            const data = doc.exists ? doc.data() : {};
+            atualizarStatusAssinatura(data);
+        });
+    }
+
+    function atualizarStatusAssinatura(data) {
+        usuarioPro = !!(data && data.isPro);
+        const btnHeaderPro = document.getElementById('btn-header-pro');
+        const btnHeaderProTxt = document.getElementById('btn-header-pro-text');
+        const bannerTitulo = document.getElementById('banner-titulo');
+        const bannerSubtitulo = document.getElementById('banner-subtitulo');
+        const btnBannerAcao = document.getElementById('btn-banner-acao');
+        const statusProBanner = document.getElementById('status-pro-banner');
+        const statusProDetalhes = document.getElementById('status-pro-detalhes');
+
+        if (usuarioPro) {
+            // Header: Botão PRO fica com gradiente verde/esmeralda
+            if (btnHeaderPro) {
+                btnHeaderPro.className = "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold px-3 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5";
+            }
+            if (btnHeaderProTxt) btnHeaderProTxt.innerText = "PRO ATIVO";
+
+            // Banner principal
+            if (bannerTitulo) bannerTitulo.innerText = "⭐ KMPRO Premium Ativo";
+            const planoNome = (data.plano === 'anual') ? 'Plano Anual' : 'Plano Mensal';
+            let expiraTexto = '';
+            if (data.dataExpiracao) {
+                const dt = new Date(data.dataExpiracao);
+                expiraTexto = ` · Válido até ${dt.toLocaleDateString('pt-BR')}`;
+            }
+            if (bannerSubtitulo) bannerSubtitulo.innerText = `Você possui acesso ilimitado com ${planoNome}${expiraTexto}.`;
+            if (btnBannerAcao) btnBannerAcao.innerText = "Ver Assinatura";
+
+            // Modal de Planos
+            if (statusProBanner) statusProBanner.classList.remove('hidden');
+            if (statusProDetalhes) statusProDetalhes.innerText = `${planoNome} ativo${expiraTexto}. Acesso liberado!`;
+        } else {
+            // Header normal
+            if (btnHeaderPro) {
+                btnHeaderPro.className = "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold px-3 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5";
+            }
+            if (btnHeaderProTxt) btnHeaderProTxt.innerText = "PRO";
+
+            // Banner normal
+            if (bannerTitulo) bannerTitulo.innerText = "KMPRO Ativo";
+            if (bannerSubtitulo) bannerSubtitulo.innerText = "Seus dados estão sincronizados em tempo real na nuvem.";
+            if (btnBannerAcao) btnBannerAcao.innerText = "Ver Planos e Vantagens";
+
+            // Modal de Planos
+            if (statusProBanner) statusProBanner.classList.add('hidden');
+        }
     }
 
     function salvarMeta() {
@@ -905,6 +980,44 @@
     function fecharModalPlanosBtn() { document.getElementById('modal-overlay-planos').classList.remove('open'); }
     function fecharModalPlanos(e) { if (e.target === document.getElementById('modal-overlay-planos')) fecharModalPlanosBtn(); }
 
+    async function iniciarCheckout(plano) {
+        if (!currentUser) {
+            alert('Você precisa estar autenticado para assinar o KMPRO.');
+            return;
+        }
+
+        const loadingEl = document.getElementById('checkout-loading');
+        const cardsEl = document.getElementById('checkout-cards');
+        if (loadingEl) loadingEl.classList.remove('hidden');
+        if (cardsEl) cardsEl.classList.add('opacity-50', 'pointer-events-none');
+
+        try {
+            const res = await fetch('/api/create-checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    plano: plano,
+                    userId: currentUser.uid,
+                    userEmail: currentUser.email || '',
+                    userName: currentUser.displayName || currentUser.email || 'Motorista KMPRO'
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.url) {
+                throw new Error(data.error || 'Não foi possível gerar o link de pagamento na InfinitePay.');
+            }
+
+            // Redireciona diretamente para o checkout oficial da InfinitePay
+            window.location.href = data.url;
+        } catch (err) {
+            console.error('Erro ao iniciar checkout:', err);
+            alert('Erro ao iniciar pagamento: ' + err.message + '\n\nSe preferir, clique no botão de suporte para falar conosco via WhatsApp!');
+            if (loadingEl) loadingEl.classList.add('hidden');
+            if (cardsEl) cardsEl.classList.remove('opacity-50', 'pointer-events-none');
+        }
+    }
+
     // ── Exportação Excel ──────────────────────────────────────────
     function exportarExcel() {
         const mes = document.getElementById('filtro-mes').value;
@@ -1113,6 +1226,17 @@
             }
         });
     }
+
+    // ── Retorno de Checkout InfinitePay ──────────────────────────
+    (function verificarRetornoCheckout() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('payment') === 'success') {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            setTimeout(() => {
+                alert('🎉 Pagamento concluído com sucesso na InfinitePay!\n\nSeu plano KMPRO Premium está sendo ativado na sua conta. Boas corridas!');
+            }, 700);
+        }
+    })();
 </script>
 
 <!-- Service Worker (PWA) -->
