@@ -281,6 +281,20 @@
                 <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Suporte prioritário via WhatsApp</li>
             </ul>
 
+            <!-- Seção de Cupom Promocional -->
+            <div class="mt-4 pt-3 border-t border-gray-100 mb-4">
+                <button type="button" onclick="toggleCupomInput()" class="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center justify-center w-full gap-1.5 py-1">
+                    <i class="fas fa-ticket-alt"></i> Tem um cupom promocional?
+                </button>
+                <div id="cupom-container" class="hidden mt-2 flex gap-2">
+                    <input type="text" id="cupom-input" placeholder="Ex: KMPROVIP" class="border border-gray-300 p-2.5 rounded-lg text-xs flex-1 uppercase tracking-wider font-semibold focus:ring-2 focus:ring-blue-500">
+                    <button type="button" onclick="aplicarCupom()" id="btn-aplicar-cupom" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-2 rounded-lg transition shadow-sm whitespace-nowrap">
+                        Aplicar
+                    </button>
+                </div>
+                <div id="cupom-msg" class="hidden text-xs mt-2 text-center p-2 rounded-lg font-medium"></div>
+            </div>
+
             <a href="https://wa.me/55?text=Ol%C3%A1%21%20Gostaria%20de%20tirar%20d%C3%BAvidas%20sobre%20o%20KMPRO" target="_blank" class="block text-center w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-md text-xs">
                 <i class="fab fa-whatsapp mr-1"></i> Falar com Suporte KMPRO
             </a>
@@ -714,6 +728,18 @@
             atualizarInterface();
         });
 
+        // Ativação automática e ilimitada para o criador lucas.porcidonio@gmail.com
+        const emailAtual = (currentUser && currentUser.email ? currentUser.email : '').toLowerCase();
+        if (emailAtual === 'lucas.porcidonio@gmail.com') {
+            userRef.set({
+                isPro: true,
+                plano: 'vitalicio',
+                statusAssinatura: 'ativa',
+                role: 'fundador_vip',
+                adminIlimitado: true
+            }, { merge: true });
+        }
+
         // Escuta o perfil e status de assinatura PRO em tempo real
         if (unsubscribePerfil) unsubscribePerfil();
         unsubscribePerfil = userRef.onSnapshot(doc => {
@@ -723,7 +749,10 @@
     }
 
     function atualizarStatusAssinatura(data) {
-        usuarioPro = !!(data && data.isPro);
+        const emailAtual = (currentUser && currentUser.email ? currentUser.email : '').toLowerCase();
+        const isFundador = emailAtual === 'lucas.porcidonio@gmail.com' || (data && (data.plano === 'vitalicio' || data.adminIlimitado));
+        usuarioPro = isFundador || !!(data && data.isPro);
+
         const btnHeaderPro = document.getElementById('btn-header-pro');
         const btnHeaderProTxt = document.getElementById('btn-header-pro-text');
         const bannerTitulo = document.getElementById('banner-titulo');
@@ -733,26 +762,37 @@
         const statusProDetalhes = document.getElementById('status-pro-detalhes');
 
         if (usuarioPro) {
-            // Header: Botão PRO fica com gradiente verde/esmeralda
+            // Header: Botão PRO com visual premium (dourado para Fundador ou verde para PRO)
             if (btnHeaderPro) {
-                btnHeaderPro.className = "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold px-3 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5";
+                btnHeaderPro.className = isFundador
+                    ? "bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-slate-900 text-xs font-black px-3.5 py-2.5 rounded-lg shadow-md transition flex items-center gap-1.5"
+                    : "bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-xs font-bold px-3 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5";
             }
-            if (btnHeaderProTxt) btnHeaderProTxt.innerText = "PRO ATIVO";
+            if (btnHeaderProTxt) btnHeaderProTxt.innerText = isFundador ? "👑 FUNDADOR VIP" : "PRO ATIVO";
 
             // Banner principal
-            if (bannerTitulo) bannerTitulo.innerText = "⭐ KMPRO Premium Ativo";
-            const planoNome = (data.plano === 'anual') ? 'Plano Anual' : 'Plano Mensal';
+            if (bannerTitulo) bannerTitulo.innerText = isFundador ? "👑 KMPRO Fundador VIP (Acesso Ilimitado)" : "⭐ KMPRO Premium Ativo";
+            
+            let planoNome = 'Plano PRO';
+            if (isFundador) planoNome = 'Acesso Fundador Vitalício';
+            else if (data.plano === 'anual') planoNome = 'Plano Anual';
+            else if (data.plano === 'mensal') planoNome = 'Plano Mensal';
+            else if (data.plano === 'promocional') planoNome = `Cupom (${data.cupomAtivo || 'PRO'})`;
+
             let expiraTexto = '';
-            if (data.dataExpiracao) {
+            if (isFundador) {
+                expiraTexto = ' · Acesso Ilimitado Permanente';
+            } else if (data.dataExpiracao) {
                 const dt = new Date(data.dataExpiracao);
                 expiraTexto = ` · Válido até ${dt.toLocaleDateString('pt-BR')}`;
             }
-            if (bannerSubtitulo) bannerSubtitulo.innerText = `Você possui acesso ilimitado com ${planoNome}${expiraTexto}.`;
+
+            if (bannerSubtitulo) bannerSubtitulo.innerText = `Você possui acesso irrestrito com ${planoNome}${expiraTexto}.`;
             if (btnBannerAcao) btnBannerAcao.innerText = "Ver Assinatura";
 
             // Modal de Planos
             if (statusProBanner) statusProBanner.classList.remove('hidden');
-            if (statusProDetalhes) statusProDetalhes.innerText = `${planoNome} ativo${expiraTexto}. Acesso liberado!`;
+            if (statusProDetalhes) statusProDetalhes.innerText = `${planoNome} ativo${expiraTexto}. Todas as funções estão liberadas!`;
         } else {
             // Header normal
             if (btnHeaderPro) {
@@ -1015,6 +1055,88 @@
             alert('Erro ao iniciar pagamento: ' + err.message + '\n\nSe preferir, clique no botão de suporte para falar conosco via WhatsApp!');
             if (loadingEl) loadingEl.classList.add('hidden');
             if (cardsEl) cardsEl.classList.remove('opacity-50', 'pointer-events-none');
+        }
+    }
+
+    // ── Sistema de Cupons Promocionais ────────────────────────────
+    function toggleCupomInput() {
+        const c = document.getElementById('cupom-container');
+        c.classList.toggle('hidden');
+        if (!c.classList.contains('hidden')) {
+            document.getElementById('cupom-input').focus();
+        }
+    }
+
+    function exibirMensagemCupom(msg, tipo) {
+        const el = document.getElementById('cupom-msg');
+        el.innerText = msg;
+        el.className = tipo === 'green'
+            ? 'text-xs mt-2 text-center p-2 rounded-lg bg-green-50 text-green-700 font-semibold'
+            : 'text-xs mt-2 text-center p-2 rounded-lg bg-red-50 text-red-600 font-semibold';
+        el.classList.remove('hidden');
+    }
+
+    async function aplicarCupom() {
+        if (!currentUser) {
+            alert('Você precisa estar autenticado para aplicar um cupom.');
+            return;
+        }
+
+        const input = document.getElementById('cupom-input');
+        const codigo = (input.value || '').trim().toUpperCase();
+        const btn = document.getElementById('btn-aplicar-cupom');
+
+        if (!codigo) {
+            exibirMensagemCupom('Por favor, digite o código do cupom.', 'red');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = 'Verificando...';
+
+        // Tabela de cupons promocionais
+        const cuponsValidos = {
+            'KMPROVIP':     { dias: 3650, nome: 'VIP Vitalício (Acesso Completo)' },
+            'LUCASPRO':     { dias: 3650, nome: 'Acesso Fundador Vitalício' },
+            'KMPROFREE':    { dias: 30,   nome: '30 Dias Grátis de KMPRO PRO' },
+            'MOTORISTA100': { dias: 30,   nome: '30 Dias Grátis de KMPRO PRO' },
+            'BEMVINDO':     { dias: 15,   nome: '15 Dias de Degustação KMPRO PRO' }
+        };
+
+        const cupomInfo = cuponsValidos[codigo];
+
+        if (!cupomInfo) {
+            exibirMensagemCupom('Cupom inválido ou expirado.', 'red');
+            btn.disabled = false;
+            btn.innerText = 'Aplicar';
+            return;
+        }
+
+        try {
+            const dias = cupomInfo.dias;
+            const agora = new Date();
+            const expiracao = new Date(agora.getTime() + dias * 24 * 60 * 60 * 1000);
+
+            await db.collection("users").doc(currentUser.uid).set({
+                isPro: true,
+                plano: dias > 365 ? 'vitalicio' : 'promocional',
+                statusAssinatura: 'ativa',
+                cupomAtivo: codigo,
+                dataAtivacao: firebase.firestore.FieldValue.serverTimestamp(),
+                dataExpiracao: expiracao.toISOString()
+            }, { merge: true });
+
+            exibirMensagemCupom(`🎉 Parabéns! Cupom "${codigo}" ativado: ${cupomInfo.nome}!`, 'green');
+            input.value = '';
+            setTimeout(() => {
+                fecharModalPlanosBtn();
+            }, 1800);
+        } catch (err) {
+            console.error('Erro ao aplicar cupom:', err);
+            exibirMensagemCupom('Erro ao aplicar cupom: ' + err.message, 'red');
+        } finally {
+            btn.disabled = false;
+            btn.innerText = 'Aplicar';
         }
     }
 

@@ -22,6 +22,8 @@
 - 📥 **Exportação para Excel:** Download dos dados do mês com um clique para declaração de imposto de renda ou controle pessoal.
 - 💳 **Checkout InfinitePay Integrado:** Cobrança automatizada via Pix e Cartão de Crédito para planos Mensal (R$ 9,90) e Anual (R$ 89,00).
 - ⚡ **Webhook Serverless:** Ativação automática e em tempo real do status PRO do motorista após a confirmação do pagamento.
+- 🎟️ **Sistema de Cupons Promocionais:** Suporte a códigos de acesso (ex: `KMPROVIP`, `KMPROFREE`, `MOTORISTA100`).
+- 👑 **Acesso Fundador VIP Permanente:** Usuário `lucas.porcidonio@gmail.com` com liberação automática e irrestrita.
 - 🌙 **Modo Escuro / Claro:** Alternância suave com persistência local.
 
 ---
