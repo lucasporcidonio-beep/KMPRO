@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KMPRO - Gestão Financeira para Motoristas</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/jpeg" href="favicon.jpg">
+    <link rel="apple-touch-icon" href="icon-512.jpg">
+    <meta name="theme-color" content="#1e3a5f">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="KMPRO">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <!-- Firebase SDK (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+    <style>
+        html.dark body        { background-color: #0f172a; color: #f8fafc; }
+        html.dark .bg-white    { background-color: #1e293b !important; }
+        html.dark .bg-gray-100 { background-color: #0f172a !important; }
+        html.dark .bg-gray-50  { background-color: #334155 !important; }
+        html.dark .bg-blue-50  { background-color: #1e3a5f !important; }
+        html.dark .text-gray-800 { color: #f1f5f9 !important; }
+        html.dark .text-gray-700 { color: #cbd5e1 !important; }
+        html.dark .text-gray-600 { color: #94a3b8 !important; }
+        html.dark .text-gray-500 { color: #64748b !important; }
+        html.dark .border-b { border-color: #334155 !important; }
+        html.dark .border   { border-color: #334155 !important; }
+        html.dark input, html.dark select { background-color: #334155 !important; color: #f1f5f9 !important; border-color: #475569 !important; }
+        html.dark .shadow-md  { box-shadow: 0 4px 6px -1px rgba(0,0,0,0.5) !important; }
+        html.dark tr:hover    { background-color: #334155 !important; }
+        html.dark .hover\:bg-gray-50:hover { background-color: #334155 !important; }
+        html.dark #modal-dia, html.dark #modal-planos { background-color: #1e293b; }
+
+        /* Calendário */
+        .cal-day { aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:8px; font-size:0.7rem; padding:2px; min-width:0; transition: transform .1s; }
+        .cal-day.clickable { cursor: pointer; }
+        .cal-day.clickable:hover { transform: scale(1.08); }
+        .cal-day.worked-good { background-color:#dcfce7; color:#166534; }
+        .cal-day.worked-bad  { background-color:#fee2e2; color:#991b1b; }
+        .cal-day.not-worked  { background-color:#f1f5f9; color:#94a3b8; }
+        .cal-day.future      { background-color:transparent; color:#cbd5e1; }
+        .cal-day.empty       { background-color:transparent; }
+        html.dark .cal-day.worked-good { background-color:#14532d; color:#bbf7d0; }
+        html.dark .cal-day.worked-bad  { background-color:#7f1d1d; color:#fecaca; }
+        html.dark .cal-day.not-worked  { background-color:#334155; color:#64748b; }
+        html.dark .cal-day.future      { background-color:transparent; color:#475569; }
+
+        /* Barras de progresso */
+        .progress-green  { background-color:#22c55e !important; }
+        .progress-yellow { background-color:#eab308 !important; }
+        .progress-blue   { background-color:#2563eb !important; }
+
+        /* Modais */
+        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:50; align-items:center; justify-content:center; }
+        .modal-overlay.open { display:flex; }
+        .modal-card { background:#fff; border-radius:1rem; max-width:500px; width:92%; padding:1.5rem; position:relative; max-height:90vh; overflow-y:auto; }
+
+        /* Tabs de Horas */
+        .hora-tab { cursor:pointer; padding:6px 16px; border-radius:6px; font-size:.85rem; font-weight:600; transition:.2s; }
+        .hora-tab.active { background:#2563eb; color:#fff; }
+        .hora-tab:not(.active) { background:#f1f5f9; color:#475569; }
+        html.dark .hora-tab:not(.active) { background:#334155; color:#cbd5e1; }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans pb-10 transition-colors duration-300">
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- TELA DE AUTENTICAÇÃO (LOGIN / CADASTRO)                         -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="auth-screen" class="min-h-screen flex items-center justify-center p-4 bg-slate-900">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 border border-slate-700/50">
+        <!-- Logo e Cabeçalho -->
+        <div class="text-center mb-6">
+            <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 text-white shadow-lg mb-3">
+                <i class="fas fa-tachometer-alt text-3xl"></i>
+            </div>
+            <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center justify-center gap-1">
+                KM<span class="text-blue-600">PRO</span>
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">Gestão financeira e rentabilidade real para motoristas de app</p>
+        </div>
+
+        <!-- Botão Google -->
+        <button onclick="loginGoogle()" class="w-full flex items-center justify-center gap-3 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-3 px-4 rounded-xl shadow-sm transition mb-4">
+            <svg class="w-5 h-5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            Entrar com o Google
+        </button>
+
+        <div class="relative flex items-center justify-center my-4">
+            <div class="border-t border-gray-200 w-full"></div>
+            <span class="bg-white px-3 text-xs text-gray-400 uppercase tracking-wider">ou e-mail</span>
+        </div>
+
+        <!-- Tabs Login / Cadastro -->
+        <div class="flex border-b border-gray-200 mb-4 text-sm font-semibold">
+            <button id="auth-tab-login" onclick="setAuthTab('login')" class="flex-1 pb-2 border-b-2 border-blue-600 text-blue-600 transition">Entrar</button>
+            <button id="auth-tab-register" onclick="setAuthTab('register')" class="flex-1 pb-2 border-b-2 border-transparent text-gray-400 hover:text-gray-700 transition">Criar Conta</button>
+        </div>
+
+        <!-- Formulário Email/Senha -->
+        <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-3">
+            <div id="auth-nome-container" class="hidden">
+                <label class="block text-xs font-medium text-gray-700">Seu Nome</label>
+                <input type="text" id="auth-nome" class="mt-1 border p-2.5 rounded-lg w-full text-sm focus:ring-2 focus:ring-blue-500" placeholder="Ex: Lucas">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700">E-mail</label>
+                <input type="email" id="auth-email" required class="mt-1 border p-2.5 rounded-lg w-full text-sm focus:ring-2 focus:ring-blue-500" placeholder="seu@email.com">
+            </div>
+
+            <div>
+                <label class="block text-xs font-medium text-gray-700">Senha</label>
+                <input type="password" id="auth-senha" required class="mt-1 border p-2.5 rounded-lg w-full text-sm focus:ring-2 focus:ring-blue-500" placeholder="Mínimo 6 caracteres">
+            </div>
+
+            <div id="auth-error" class="hidden text-xs text-red-600 bg-red-50 p-2.5 rounded-lg"></div>
+
+            <button type="submit" id="auth-submit-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition text-sm shadow-md mt-2">
+                Entrar
+            </button>
+        </form>
+
+        <div class="mt-4 text-center">
+            <button onclick="esqueciSenha()" class="text-xs text-blue-600 hover:underline">Esqueceu sua senha?</button>
+        </div>
+
+        <div class="mt-6 pt-4 border-t border-gray-100 flex items-center justify-around text-xs text-gray-500">
+            <span><i class="fas fa-shield-alt text-green-500 mr-1"></i> Dados Seguros</span>
+            <span><i class="fas fa-cloud text-blue-500 mr-1"></i> Sincronizado</span>
+            <span><i class="fas fa-mobile-alt text-indigo-500 mr-1"></i> PWA Celular</span>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- APLICAÇÃO PRINCIPAL (EXIBIDA APÓS O LOGIN)                      -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div id="app-screen" class="hidden">
+
+    <!-- MODAL DETALHE DO DIA -->
+    <div id="modal-overlay-dia" class="modal-overlay" onclick="fecharModalDia(event)">
+        <div id="modal-dia" class="modal-card">
+            <button onclick="fecharModalDiaBtn()" class="absolute top-3 right-4 text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+            <h2 class="text-lg font-bold text-gray-800 mb-4" id="modal-titulo">Detalhe do Dia</h2>
+
+            <div class="grid grid-cols-2 gap-3 mb-4">
+                <div class="bg-green-50 rounded-lg p-3">
+                    <p class="text-xs text-gray-500">Faturamento Bruto</p>
+                    <p class="text-xl font-bold text-green-700" id="md-bruto">—</p>
+                </div>
+                <div class="bg-blue-50 rounded-lg p-3">
+                    <p class="text-xs text-gray-500">Faturamento Líquido</p>
+                    <p class="text-xl font-bold text-blue-700" id="md-liquido">—</p>
+                </div>
+                <div class="bg-red-50 rounded-lg p-3">
+                    <p class="text-xs text-gray-500"><i class="fas fa-gas-pump text-yellow-500"></i> Combustível</p>
+                    <p class="text-lg font-semibold text-red-600" id="md-combustivel">—</p>
+                </div>
+                <div class="bg-orange-50 rounded-lg p-3">
+                    <p class="text-xs text-gray-500"><i class="fas fa-tools text-orange-400"></i> Manut./Refeição</p>
+                    <p class="text-lg font-semibold text-orange-600" id="md-outros">—</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 mb-4">
+                <div class="text-center bg-gray-50 rounded-lg p-3">
+                    <p class="text-xs text-gray-500"><i class="far fa-clock"></i> Horas</p>
+                    <p class="font-bold text-gray-800" id="md-horas">—</p>
+                </div>
+                <div class="text-center bg-gray-50 rounded-lg p-3">
+                    <p class="text-xs text-gray-500"><i class="fas fa-road"></i> KM</p>
+                    <p class="font-bold text-gray-800" id="md-km">—</p>
+                </div>
+                <div class="text-center bg-gray-50 rounded-lg p-3">
+                    <p class="text-xs text-gray-500"><i class="fas fa-tachometer-alt"></i> R$/KM</p>
+                    <p class="font-bold text-gray-800" id="md-rkm">—</p>
+                </div>
+            </div>
+
+            <!-- Mini indicadores comparativos -->
+            <div class="border-t pt-3 space-y-2">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Comparativo com o mês</p>
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-gray-600">R$/hora neste dia</span>
+                        <span class="font-bold" id="md-rhora">—</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="h-2 rounded-full bg-blue-500 transition-all" id="md-rhora-bar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-gray-600">Líquido vs. melhor dia do mês</span>
+                        <span class="font-bold" id="md-liq-pct">—</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="h-2 rounded-full bg-green-500 transition-all" id="md-liq-bar" style="width:0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 text-center text-xs text-gray-400" id="md-horario-info"></div>
+        </div>
+    </div>
+
+    <!-- MODAL PLANOS E ASSINATURA -->
+    <div id="modal-overlay-planos" class="modal-overlay" onclick="fecharModalPlanos(event)">
+        <div id="modal-planos" class="modal-card max-w-md">
+            <button onclick="fecharModalPlanosBtn()" class="absolute top-3 right-4 text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+            <div class="text-center mb-4">
+                <span class="bg-blue-100 text-blue-700 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">KMPRO Premium</span>
+                <h2 class="text-xl font-bold text-gray-800 mt-2">Evolua seu Lucro</h2>
+                <p class="text-xs text-gray-500 mt-1">Mais do que um app: a ferramenta de gestão para quem vive de app.</p>
+            </div>
+
+            <div class="space-y-3 mb-6">
+                <div class="border-2 border-blue-500 bg-blue-50/50 rounded-xl p-4 relative cursor-pointer">
+                    <span class="absolute -top-2.5 right-4 bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">POPULAR</span>
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-gray-800">Plano Anual</p>
+                            <p class="text-xs text-gray-500">Equivalente a R$ 7,42/mês</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xl font-extrabold text-blue-600">R$ 89,00</p>
+                            <p class="text-[10px] text-gray-400">por ano via Pix/Cartão</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="border border-gray-200 rounded-xl p-4 cursor-pointer hover:border-gray-300 transition">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-gray-800">Plano Mensal</p>
+                            <p class="text-xs text-gray-500">Sem fidelidade, cancele quando quiser</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-lg font-bold text-gray-800">R$ 9,90</p>
+                            <p class="text-[10px] text-gray-400">por mês</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <ul class="text-xs text-gray-600 space-y-2 mb-6">
+                <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Backup em nuvem seguro e ilimitado</li>
+                <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Horímetro e cálculo real de rentabilidade por km</li>
+                <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Exportação ilimitada em Excel</li>
+                <li class="flex items-center gap-2"><i class="fas fa-check text-green-500"></i> Suporte prioritário via WhatsApp</li>
+            </ul>
+
+            <button onclick="alert('Em breve: integração direta com pagamento via Pix automático!')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition shadow-md">
+                <i class="fab fa-whatsapp mr-1"></i> Falar com Suporte KMPRO
+            </button>
+        </div>
+    </div>
+
+    <!-- CONTAINER PRINCIPAL DO APP -->
+    <div class="container mx-auto p-4 max-w-6xl">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md">
+                    <i class="fas fa-tachometer-alt text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-black text-gray-800 tracking-tight">KM<span class="text-blue-600">PRO</span></h1>
+                    <p class="text-xs text-gray-500" id="user-display-email">Carregando...</p>
+                </div>
+            </div>
+
+            <!-- Controles do Header -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <div class="flex items-center bg-white p-2 rounded-lg shadow-sm">
+                    <label class="font-medium text-gray-700 mr-2"><i class="far fa-calendar-alt text-blue-600"></i></label>
+                    <input type="month" id="filtro-mes" class="border-0 focus:ring-0 text-gray-700 font-semibold cursor-pointer" onchange="atualizarInterface()">
+                </div>
+
+                <button onclick="abrirModalPlanos()" class="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold px-3 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5">
+                    <i class="fas fa-crown"></i> <span>PRO</span>
+                </button>
+
+                <button onclick="toggleDark()" class="bg-white p-2 w-10 h-10 rounded-lg shadow-sm text-gray-600 hover:text-blue-600 transition text-lg" title="Modo Escuro">
+                    <i class="fas fa-moon"></i>
+                </button>
+
+                <button onclick="logout()" class="bg-white p-2 w-10 h-10 rounded-lg shadow-sm text-gray-500 hover:text-red-600 transition text-lg" title="Sair da Conta">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Banner de Período de Teste / Boas-vindas -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl p-4 mb-6 shadow-md flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center text-lg">
+                    <i class="fas fa-bolt"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-bold">KMPRO Ativo</p>
+                    <p class="text-xs text-blue-100">Seus dados estão sincronizados em tempo real na nuvem.</p>
+                </div>
+            </div>
+            <button onclick="abrirModalPlanos()" class="bg-white text-blue-700 hover:bg-blue-50 text-xs font-bold px-4 py-2 rounded-lg transition whitespace-nowrap shadow-sm">
+                Ver Planos e Vantagens
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            <!-- ── COLUNA ESQUERDA: RESUMO + CALENDÁRIO + GRÁFICO ── -->
+            <div class="lg:col-span-1 space-y-6">
+
+                <!-- Resumo Mensal -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-4 border-b pb-2 text-gray-800">Resumo do Mês</h2>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Meta Mensal (R$)</label>
+                        <div class="flex mt-1">
+                            <input type="number" id="meta-input" class="border p-2 rounded-l-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ex: 5000">
+                            <button onclick="salvarMeta()" class="bg-blue-600 text-white px-4 py-2 rounded-r-md hover:bg-blue-700">Salvar</button>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-500">Total Líquido Acumulado</p>
+                            <p class="text-2xl font-bold text-blue-700" id="resumo-total">R$ 0,00</p>
+                        </div>
+                        <div>
+                            <p class="text-sm text-gray-500 flex justify-between">
+                                <span>Progresso da Meta</span>
+                                <span id="resumo-progresso-txt" class="font-bold text-gray-700">0%</span>
+                            </p>
+                            <div class="w-full bg-gray-200 rounded-full h-3 mt-1">
+                                <div class="h-3 rounded-full transition-all duration-500 progress-blue" id="resumo-barra" style="width:0%"></div>
+                            </div>
+                            <p class="text-xs mt-1" id="resumo-falta">Faltam: R$ 0,00</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 pt-4 border-t">
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                                <p class="text-xs text-gray-500">Média/Hora</p>
+                                <p class="text-md font-semibold text-gray-800" id="resumo-hora">R$ 0,00</p>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg">
+                                <p class="text-xs text-gray-500">Média/KM</p>
+                                <p class="text-md font-semibold text-gray-800" id="resumo-km">R$ 0,00</p>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t space-y-2">
+                            <p class="text-sm font-semibold text-gray-700">Detalhamento de Gastos</p>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500"><i class="fas fa-gas-pump text-yellow-500 mr-1"></i> Combustível</span>
+                                <span class="font-medium text-red-500" id="resumo-combustivel">R$ 0,00</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500"><i class="fas fa-tools text-orange-500 mr-1"></i> Manut./Refeição</span>
+                                <span class="font-medium text-red-500" id="resumo-outros">R$ 0,00</span>
+                            </div>
+                            <div class="flex justify-between text-sm border-t pt-2">
+                                <span class="text-gray-500"><i class="fas fa-receipt text-gray-400 mr-1"></i> Faturamento Bruto</span>
+                                <span class="font-medium text-gray-800" id="resumo-bruto">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendário -->
+                <div class="bg-white p-5 rounded-lg shadow-md">
+                    <h3 class="text-md font-semibold text-gray-700 mb-2"><i class="far fa-calendar text-blue-500 mr-1"></i> Calendário — clique no dia</h3>
+                    <div class="flex gap-2 flex-wrap mb-2 text-xs">
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-green-200 inline-block"></span> Bom</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-red-200 inline-block"></span> Fraco</span>
+                        <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-gray-200 inline-block"></span> Folga</span>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1 text-center text-xs text-gray-400 mb-1">
+                        <div>D</div><div>S</div><div>T</div><div>Q</div><div>Q</div><div>S</div><div>S</div>
+                    </div>
+                    <div class="grid grid-cols-7 gap-1" id="calendario"></div>
+                </div>
+
+                <!-- Gráfico -->
+                <div class="bg-white p-5 rounded-lg shadow-md">
+                    <h3 class="text-md font-semibold text-gray-700 mb-2"><i class="fas fa-chart-bar text-blue-500 mr-1"></i> Faturamento Diário (Líquido)</h3>
+                    <canvas id="graficoFaturamento" height="200"></canvas>
+                </div>
+            </div>
+
+            <!-- ── COLUNA DIREITA: FORMULÁRIO + TABELA ─────────── -->
+            <div class="lg:col-span-2 space-y-6">
+
+                <!-- Formulário -->
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h2 class="text-xl font-semibold mb-4 border-b pb-2 text-gray-800" id="titulo-form">Novo Lançamento Diário</h2>
+                    <form id="lancamento-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="hidden" id="edit-id" value="">
+
+                        <!-- Data -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Data</label>
+                            <input type="date" id="data" required class="mt-1 border p-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Modo de entrada de horas -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Modo de Registro de Horas</label>
+                            <div class="flex gap-2 mb-3">
+                                <span class="hora-tab active" id="tab-horimetro" onclick="setModoHora('horimetro')">
+                                    <i class="fas fa-tachometer-alt mr-1"></i> Horímetro
+                                </span>
+                                <span class="hora-tab" id="tab-horario" onclick="setModoHora('horario')">
+                                    <i class="fas fa-clock mr-1"></i> Horário (início/fim)
+                                </span>
+                            </div>
+
+                            <!-- Modo Horímetro -->
+                            <div id="modo-horimetro">
+                                <label class="block text-xs font-medium text-gray-600">Horas de Direção (HH:MM)</label>
+                                <input type="time" id="horimetro" class="mt-1 border p-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" oninput="calcularHoras()">
+                                <p class="text-xs text-gray-400 mt-1">Informe as horas exibidas no computador de bordo do veículo</p>
+                            </div>
+
+                            <!-- Modo Horário -->
+                            <div id="modo-horario" class="grid grid-cols-2 gap-3 hidden">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">Início do Trabalho</label>
+                                    <input type="time" id="hora-inicio" class="mt-1 border p-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="calcularHoras()">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">Fim do Trabalho</label>
+                                    <input type="time" id="hora-fim" class="mt-1 border p-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="calcularHoras()">
+                                </div>
+                                <div class="col-span-2 bg-blue-50 px-3 py-2 rounded-md text-sm text-blue-700 font-medium" id="horas-calculadas" style="display:none">
+                                    <i class="fas fa-check-circle mr-1"></i> Total: <span id="horas-calc-valor">0h 0min</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Faturamento Bruto -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Faturamento Bruto (R$)</label>
+                            <input type="number" step="0.01" id="bruto" required class="mt-1 border p-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- KM Rodados -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Km Rodados</label>
+                            <input type="number" step="1" id="km" required class="mt-1 border p-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Consumo -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Consumo do Carro (Km/L)</label>
+                            <input type="number" step="0.1" id="consumo" required class="mt-1 border p-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Preço litro -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Preço do Combustível (R$/L)</label>
+                            <input type="number" step="0.01" id="preco_litro" required class="mt-1 border p-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Outros (Manutenção / Refeição) -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">Manutenção / Refeição (R$)</label>
+                            <input type="number" step="0.01" id="outros" value="0" class="mt-1 border p-2 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div class="md:col-span-2 flex gap-2">
+                            <button type="submit" id="btn-submit" class="flex-1 bg-green-600 text-white font-bold py-2.5 px-4 rounded-md hover:bg-green-700 transition shadow">
+                                <i class="fas fa-plus mr-1"></i> Adicionar Dia
+                            </button>
+                            <button type="button" id="btn-cancel" onclick="cancelarEdicao()" class="hidden bg-gray-500 text-white font-bold py-2.5 px-4 rounded-md hover:bg-gray-600 transition">
+                                Cancelar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabela -->
+                <div class="bg-white p-6 rounded-lg shadow-md overflow-x-auto">
+                    <div class="flex justify-between items-center mb-4 border-b pb-2">
+                        <h2 class="text-xl font-semibold text-gray-800">Histórico</h2>
+                        <button onclick="exportarExcel()" class="bg-emerald-600 text-white text-sm px-4 py-2 rounded-md hover:bg-emerald-700 transition shadow-sm">
+                            <i class="fas fa-file-excel mr-1"></i> Exportar Excel
+                        </button>
+                    </div>
+                    <table class="min-w-full text-sm text-left">
+                        <thead class="bg-gray-50 text-gray-600">
+                            <tr>
+                                <th class="py-2 px-3 border-b">Data</th>
+                                <th class="py-2 px-3 border-b">Período</th>
+                                <th class="py-2 px-3 border-b">KM</th>
+                                <th class="py-2 px-3 border-b">Bruto</th>
+                                <th class="py-2 px-3 border-b">Líquido</th>
+                                <th class="py-2 px-3 border-b text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-corpo"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- SCRIPTS JAVASCRIPT                                             -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<script>
+    // ── Configuração Firebase ─────────────────────────────────────
+    const firebaseConfig = {
+        apiKey: "AIzaSyDxD4hm8RsTkihEL320tt5V1GH5dWyBIFE",
+        authDomain: "controle-financeiro-moto-b139a.firebaseapp.com",
+        projectId: "controle-financeiro-moto-b139a",
+        storageBucket: "controle-financeiro-moto-b139a.firebasestorage.app",
+        messagingSenderId: "711816668835",
+        appId: "1:711816668835:web:b085fb4cfd0ad66c528116"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // ── Estado da Aplicação ───────────────────────────────────────
+    let currentUser = null;
+    let entradas = [];
+    let metaMensal = 0;
+    let chartInstance = null;
+    let modoHora = 'horimetro'; // 'horimetro' | 'horario'
+    let authTab = 'login';      // 'login' | 'register'
+    let unsubscribeMeta = null;
+    let unsubscribeLancamentos = null;
+
+    function getDataHoje() {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    const hoje = new Date();
+    const mesAtual = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+    document.getElementById('filtro-mes').value = mesAtual;
+    document.getElementById('data').value = getDataHoje();
+
+    // Dark mode
+    if (localStorage.getItem('darkMode') === 'true') document.documentElement.classList.add('dark');
+    function toggleDark() {
+        document.documentElement.classList.toggle('dark');
+        localStorage.setItem('darkMode', document.documentElement.classList.contains('dark'));
+    }
+
+    const fmt = v => new Intl.NumberFormat('pt-BR', { style:'currency', currency:'BRL' }).format(v);
+
+    // ── Autenticação ──────────────────────────────────────────────
+    auth.onAuthStateChanged((user) => {
+        currentUser = user;
+        if (user) {
+            document.getElementById('auth-screen').classList.add('hidden');
+            document.getElementById('app-screen').classList.remove('hidden');
+            document.getElementById('user-display-email').innerText = user.displayName || user.email;
+            inicializarDadosUsuario(user.uid);
+        } else {
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('app-screen').classList.add('hidden');
+            if (unsubscribeMeta) unsubscribeMeta();
+            if (unsubscribeLancamentos) unsubscribeLancamentos();
+            entradas = [];
+            metaMensal = 0;
+        }
+    });
+
+    function setAuthTab(tab) {
+        authTab = tab;
+        const isLogin = tab === 'login';
+        document.getElementById('auth-tab-login').className = isLogin 
+            ? 'flex-1 pb-2 border-b-2 border-blue-600 text-blue-600 transition' 
+            : 'flex-1 pb-2 border-b-2 border-transparent text-gray-400 hover:text-gray-700 transition';
+        document.getElementById('auth-tab-register').className = !isLogin 
+            ? 'flex-1 pb-2 border-b-2 border-blue-600 text-blue-600 transition' 
+            : 'flex-1 pb-2 border-b-2 border-transparent text-gray-400 hover:text-gray-700 transition';
+        
+        document.getElementById('auth-nome-container').classList.toggle('hidden', isLogin);
+        document.getElementById('auth-submit-btn').innerText = isLogin ? 'Entrar' : 'Cadastrar e Começar';
+        document.getElementById('auth-error').classList.add('hidden');
+    }
+
+    function handleAuthSubmit(e) {
+        e.preventDefault();
+        const email = document.getElementById('auth-email').value.trim();
+        const senha = document.getElementById('auth-senha').value;
+        const nome = document.getElementById('auth-nome').value.trim();
+        const errEl = document.getElementById('auth-error');
+        errEl.classList.add('hidden');
+
+        if (authTab === 'login') {
+            auth.signInWithEmailAndPassword(email, senha).catch(err => {
+                errEl.innerText = traduzirErroAuth(err.code);
+                errEl.classList.remove('hidden');
+            });
+        } else {
+            auth.createUserWithEmailAndPassword(email, senha).then(cred => {
+                if (nome) cred.user.updateProfile({ displayName: nome });
+                db.collection("users").doc(cred.user.uid).set({
+                    nome: nome || '',
+                    email: email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            }).catch(err => {
+                errEl.innerText = traduzirErroAuth(err.code);
+                errEl.classList.remove('hidden');
+            });
+        }
+    }
+
+    function loginGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        auth.signInWithPopup(provider).then(result => {
+            const u = result.user;
+            db.collection("users").doc(u.uid).set({
+                nome: u.displayName || '',
+                email: u.email,
+                lastLogin: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+        }).catch(err => {
+            alert('Erro no login com Google: ' + err.message);
+        });
+    }
+
+    function logout() {
+        if (confirm("Deseja sair da sua conta KMPRO?")) {
+            auth.signOut();
+        }
+    }
+
+    function esqueciSenha() {
+        const email = prompt("Digite seu e-mail para receber as instruções de recuperação:");
+        if (email) {
+            auth.sendPasswordResetEmail(email)
+                .then(() => alert("E-mail de recuperação enviado com sucesso! Verifique sua caixa de entrada."))
+                .catch(err => alert("Erro: " + err.message));
+        }
+    }
+
+    function traduzirErroAuth(code) {
+        switch (code) {
+            case 'auth/user-not-found':
+            case 'auth/wrong-password':
+            case 'auth/invalid-credential':
+                return 'E-mail ou senha incorretos.';
+            case 'auth/email-already-in-use':
+                return 'Este e-mail já está cadastrado. Faça login.';
+            case 'auth/weak-password':
+                return 'A senha deve ter no mínimo 6 caracteres.';
+            case 'auth/invalid-email':
+                return 'Formato de e-mail inválido.';
+            default:
+                return 'Erro na autenticação. Tente novamente.';
+        }
+    }
+
+    // ── Dados do Usuário (Multi-tenant) ───────────────────────────
+    function inicializarDadosUsuario(uid) {
+        const userRef = db.collection("users").doc(uid);
+
+        // Escuta a meta do usuário
+        if (unsubscribeMeta) unsubscribeMeta();
+        unsubscribeMeta = userRef.collection("config").doc("meta").onSnapshot(doc => {
+            metaMensal = doc.exists ? (doc.data().valor || 0) : 0;
+            document.getElementById('meta-input').value = metaMensal > 0 ? metaMensal : '';
+            atualizarInterface();
+        });
+
+        // Escuta os lançamentos do usuário
+        if (unsubscribeLancamentos) unsubscribeLancamentos();
+        unsubscribeLancamentos = userRef.collection("lancamentos").orderBy("data").onSnapshot(snapshot => {
+            entradas = [];
+            snapshot.forEach(doc => entradas.push({ id: doc.id, ...doc.data() }));
+            atualizarInterface();
+        });
+    }
+
+    function salvarMeta() {
+        if (!currentUser) return;
+        const valor = parseFloat(document.getElementById('meta-input').value);
+        if (!isNaN(valor) && valor > 0) {
+            db.collection("users").doc(currentUser.uid).collection("config").doc("meta")
+                .set({ valor }).catch(e => alert('Erro ao salvar meta: ' + e));
+        }
+    }
+
+    // ── Modos de Hora ─────────────────────────────────────────────
+    function setModoHora(modo) {
+        modoHora = modo;
+        document.getElementById('tab-horimetro').classList.toggle('active', modo === 'horimetro');
+        document.getElementById('tab-horario').classList.toggle('active', modo === 'horario');
+        document.getElementById('modo-horimetro').classList.toggle('hidden', modo !== 'horimetro');
+        document.getElementById('modo-horario').classList.toggle('hidden', modo !== 'horario');
+        
+        document.getElementById('hora-inicio').value = '';
+        document.getElementById('hora-fim').value = '';
+        document.getElementById('horimetro').value = '';
+        document.getElementById('horas-calculadas').style.display = 'none';
+    }
+
+    function calcularHoras() {
+        if (modoHora === 'horario') {
+            const inicio = document.getElementById('hora-inicio').value;
+            const fim    = document.getElementById('hora-fim').value;
+            if (inicio && fim) {
+                const [ih, im] = inicio.split(':').map(Number);
+                const [fh, fm] = fim.split(':').map(Number);
+                let totalMin = (fh * 60 + fm) - (ih * 60 + im);
+                if (totalMin < 0) totalMin += 24 * 60;
+                const h = Math.floor(totalMin / 60);
+                const m = totalMin % 60;
+                document.getElementById('horas-calc-valor').innerText = `${h}h ${m}min`;
+                document.getElementById('horas-calculadas').style.display = 'block';
+                return totalMin / 60;
+            }
+        } else {
+            const val = document.getElementById('horimetro').value;
+            if (val) {
+                const [h, m] = val.split(':').map(Number);
+                const totalMin = h * 60 + m;
+                document.getElementById('horas-calc-valor').innerText = `${h}h ${m}min`;
+                document.getElementById('horas-calculadas').style.display = 'block';
+                return totalMin / 60;
+            }
+        }
+        document.getElementById('horas-calculadas').style.display = 'none';
+        return 0;
+    }
+
+    function obterHoras() {
+        if (modoHora === 'horario') {
+            const inicio = document.getElementById('hora-inicio').value;
+            const fim    = document.getElementById('hora-fim').value;
+            if (!inicio || !fim) { alert('Informe o horário de início e fim.'); return null; }
+            const [ih, im] = inicio.split(':').map(Number);
+            const [fh, fm] = fim.split(':').map(Number);
+            let totalMin = (fh * 60 + fm) - (ih * 60 + im);
+            if (totalMin <= 0) totalMin += 24 * 60;
+            return { horas: totalMin / 60, horaInicio: inicio, horaFim: fim, modoHora: 'horario' };
+        } else {
+            const val = document.getElementById('horimetro').value;
+            if (!val) { alert('Informe as horas do horímetro (HH:MM).'); return null; }
+            const [h, m] = val.split(':').map(Number);
+            const totalMin = h * 60 + m;
+            if (totalMin <= 0) { alert('Informe um tempo válido no horímetro.'); return null; }
+            return { horas: totalMin / 60, horimetroHHMM: val, modoHora: 'horimetro' };
+        }
+    }
+
+    // ── CRUD Lançamentos ──────────────────────────────────────────
+    document.getElementById('lancamento-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (!currentUser) return;
+
+        const idEdit = document.getElementById('edit-id').value;
+        const horaInfo = obterHoras();
+        if (!horaInfo) return;
+
+        const data       = document.getElementById('data').value;
+        const bruto      = parseFloat(document.getElementById('bruto').value);
+        const km         = parseFloat(document.getElementById('km').value);
+        const consumo    = parseFloat(document.getElementById('consumo').value);
+        const precoLitro = parseFloat(document.getElementById('preco_litro').value);
+        const outros     = parseFloat(document.getElementById('outros').value) || 0;
+        const combustivel = (km / consumo) * precoLitro;
+        const liquido    = bruto - combustivel - outros;
+
+        const payload = { data, bruto, km, consumo, precoLitro, combustivel, outros, liquido, ...horaInfo };
+        const lancamentosRef = db.collection("users").doc(currentUser.uid).collection("lancamentos");
+
+        const btn = document.getElementById('btn-submit');
+        btn.innerText = 'Salvando...';
+        btn.disabled = true;
+
+        if (idEdit) {
+            lancamentosRef.doc(idEdit).update(payload).then(cancelarEdicao).finally(() => btn.disabled = false);
+        } else {
+            lancamentosRef.add(payload).then(() => {
+                document.getElementById('filtro-mes').value = data.substring(0, 7);
+                this.reset();
+                document.getElementById('data').value = getDataHoje();
+                document.getElementById('outros').value = '0';
+                setModoHora('horimetro');
+                btn.innerHTML = '<i class="fas fa-plus mr-1"></i> Adicionar Dia';
+            }).finally(() => { btn.disabled = false; btn.innerHTML = '<i class="fas fa-plus mr-1"></i> Adicionar Dia'; });
+        }
+    });
+
+    function deletarEntrada(id) {
+        if (!currentUser) return;
+        if (confirm("Tem certeza que deseja excluir este dia?")) {
+            db.collection("users").doc(currentUser.uid).collection("lancamentos").doc(id).delete();
+        }
+    }
+
+    function editarEntrada(id) {
+        const e = entradas.find(e => e.id === id);
+        if (!e) return;
+        document.getElementById('edit-id').value  = e.id;
+        document.getElementById('data').value     = e.data;
+        document.getElementById('bruto').value    = e.bruto;
+        document.getElementById('km').value       = e.km;
+        document.getElementById('consumo').value  = e.consumo || '';
+        document.getElementById('preco_litro').value = e.precoLitro || '';
+        document.getElementById('outros').value   = e.outros !== undefined ? e.outros : 0;
+
+        if (e.modoHora === 'horario') {
+            setModoHora('horario');
+            if (e.horaInicio) document.getElementById('hora-inicio').value = e.horaInicio;
+            if (e.horaFim)    document.getElementById('hora-fim').value    = e.horaFim;
+            calcularHoras();
+        } else {
+            setModoHora('horimetro');
+            document.getElementById('horimetro').value = e.horimetroHHMM || '';
+            calcularHoras();
+        }
+
+        document.getElementById('titulo-form').innerText = "✏️ Editar Lançamento";
+        document.getElementById('titulo-form').className = "text-xl font-semibold mb-4 border-b pb-2 text-blue-600";
+        document.getElementById('btn-submit').innerText = "Salvar Alterações";
+        document.getElementById('btn-submit').className = "flex-1 bg-blue-600 text-white font-bold py-2.5 px-4 rounded-md hover:bg-blue-700 transition shadow";
+        document.getElementById('btn-cancel').classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelarEdicao() {
+        document.getElementById('edit-id').value = '';
+        document.getElementById('lancamento-form').reset();
+        document.getElementById('data').value = getDataHoje();
+        document.getElementById('outros').value = '0';
+        setModoHora('horimetro');
+        document.getElementById('titulo-form').innerText = "Novo Lançamento Diário";
+        document.getElementById('titulo-form').className = "text-xl font-semibold mb-4 border-b pb-2 text-gray-800";
+        document.getElementById('btn-submit').innerHTML = '<i class="fas fa-plus mr-1"></i> Adicionar Dia';
+        document.getElementById('btn-submit').className = "flex-1 bg-green-600 text-white font-bold py-2.5 px-4 rounded-md hover:bg-green-700 transition shadow";
+        document.getElementById('btn-cancel').classList.add('hidden');
+    }
+
+    // ── Modais ────────────────────────────────────────────────────
+    function abrirModalDia(id) {
+        const e = entradas.find(e => e.id === id);
+        if (!e) return;
+
+        const mes = document.getElementById('filtro-mes').value;
+        const filtradas = entradas.filter(f => f.data.startsWith(mes));
+        const melhorLiq = Math.max(...filtradas.map(f => f.liquido));
+        const mediaRhora = filtradas.length > 0
+            ? filtradas.reduce((acc, f) => acc + (f.horas > 0 ? f.liquido / f.horas : 0), 0) / filtradas.length
+            : 0;
+
+        const [ano, m, dia] = e.data.split('-');
+        document.getElementById('modal-titulo').innerText = `📅 ${dia}/${m}/${ano}`;
+        document.getElementById('md-bruto').innerText      = fmt(e.bruto);
+        document.getElementById('md-liquido').innerText    = fmt(e.liquido);
+        document.getElementById('md-combustivel').innerText = fmt(e.combustivel);
+        document.getElementById('md-outros').innerText     = fmt(e.outros);
+        document.getElementById('md-horas').innerText      = `${e.horas.toFixed(1)}h`;
+        document.getElementById('md-km').innerText         = `${e.km} km`;
+        document.getElementById('md-rkm').innerText        = e.km > 0 ? fmt(e.liquido / e.km) : '—';
+
+        const rhora = e.horas > 0 ? e.liquido / e.horas : 0;
+        document.getElementById('md-rhora').innerText = fmt(rhora);
+        const rhoraPct = mediaRhora > 0 ? Math.min((rhora / (mediaRhora * 2)) * 100, 100) : 0;
+        document.getElementById('md-rhora-bar').style.width = rhoraPct + '%';
+
+        const liqPct = melhorLiq > 0 ? Math.min((e.liquido / melhorLiq) * 100, 100) : 0;
+        document.getElementById('md-liq-pct').innerText = `${liqPct.toFixed(0)}% do melhor dia`;
+        document.getElementById('md-liq-bar').style.width = liqPct + '%';
+
+        let horarioInfo = '';
+        if (e.modoHora === 'horario' && e.horaInicio && e.horaFim) {
+            horarioInfo = `⏱ Horário: ${e.horaInicio} → ${e.horaFim}`;
+        } else if (e.modoHora === 'horimetro') {
+            horarioInfo = `🕐 Horímetro: ${e.horimetroHHMM || e.horas.toFixed(1) + 'h'}`;
+        }
+        document.getElementById('md-horario-info').innerText = horarioInfo;
+
+        document.getElementById('modal-overlay-dia').classList.add('open');
+    }
+
+    function fecharModalDiaBtn() { document.getElementById('modal-overlay-dia').classList.remove('open'); }
+    function fecharModalDia(e) { if (e.target === document.getElementById('modal-overlay-dia')) fecharModalDiaBtn(); }
+
+    function abrirModalPlanos() { document.getElementById('modal-overlay-planos').classList.add('open'); }
+    function fecharModalPlanosBtn() { document.getElementById('modal-overlay-planos').classList.remove('open'); }
+    function fecharModalPlanos(e) { if (e.target === document.getElementById('modal-overlay-planos')) fecharModalPlanosBtn(); }
+
+    // ── Exportação Excel ──────────────────────────────────────────
+    function exportarExcel() {
+        const mes = document.getElementById('filtro-mes').value;
+        const filtradas = entradas.filter(e => e.data.startsWith(mes));
+        if (!filtradas.length) { alert('Nenhum dado para exportar neste mês.'); return; }
+
+        const dados = filtradas.map(e => ({
+            'Data': e.data,
+            'Início': e.horaInicio || '—',
+            'Fim': e.horaFim || '—',
+            'Horímetro (HH:MM)': e.horimetroHHMM || '—',
+            'Horas Totais': e.horas.toFixed(2),
+            'KM': e.km,
+            'Bruto (R$)': e.bruto.toFixed(2),
+            'Combustível (R$)': e.combustivel.toFixed(2),
+            'Manut./Ref. (R$)': e.outros.toFixed(2),
+            'Líquido (R$)': e.liquido.toFixed(2),
+            'R$/Hora': (e.horas > 0 ? (e.liquido / e.horas).toFixed(2) : '0'),
+            'R$/KM': (e.km > 0 ? (e.liquido / e.km).toFixed(2) : '0')
+        }));
+        const ws = XLSX.utils.json_to_sheet(dados);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "KMPRO_Lancamentos");
+        XLSX.writeFile(wb, `kmpro_controle_${mes}.xlsx`);
+    }
+
+    // ── Atualização da Interface Principal ────────────────────────
+    function atualizarInterface() {
+        const mes = document.getElementById('filtro-mes').value;
+        const filtradas = entradas.filter(e => e.data.startsWith(mes));
+
+        let totalLiq = 0, totalHoras = 0, totalKm = 0, totalBruto = 0, totalComb = 0, totalOutros = 0;
+        const diasGraf = [], liqGraf = [];
+        const tbody = document.getElementById('tabela-corpo');
+        tbody.innerHTML = '';
+
+        filtradas.forEach(e => {
+            totalLiq    += e.liquido;
+            totalHoras  += e.horas;
+            totalKm     += e.km;
+            totalBruto  += e.bruto;
+            totalComb   += e.combustivel;
+            totalOutros += e.outros;
+
+            const [ano, m, dia] = e.data.split('-');
+            diasGraf.push(dia);
+            liqGraf.push(e.liquido);
+
+            let periodo = '';
+            if (e.modoHora === 'horario' && e.horaInicio && e.horaFim) {
+                periodo = `${e.horaInicio}–${e.horaFim}`;
+            } else {
+                periodo = e.horimetroHHMM ? `${e.horimetroHHMM}` : `${e.horas.toFixed(1)}h`;
+            }
+
+            const row = document.createElement('tr');
+            row.className = "hover:bg-gray-50 border-b cursor-pointer";
+            row.onclick = () => abrirModalDia(e.id);
+            row.innerHTML = `
+                <td class="py-2.5 px-3 font-medium">${dia}/${m}</td>
+                <td class="py-2.5 px-3 text-gray-600 text-xs">${periodo}</td>
+                <td class="py-2.5 px-3">${e.km} km</td>
+                <td class="py-2.5 px-3 text-gray-700">${fmt(e.bruto)}</td>
+                <td class="py-2.5 px-3 font-semibold ${e.liquido >= 0 ? 'text-green-600' : 'text-red-600'}">${fmt(e.liquido)}</td>
+                <td class="py-2.5 px-3 text-center space-x-2" onclick="event.stopPropagation()">
+                    <button onclick="editarEntrada('${e.id}')" class="text-blue-500 hover:text-blue-700 p-1" title="Editar"><i class="fas fa-edit"></i></button>
+                    <button onclick="deletarEntrada('${e.id}')" class="text-red-500 hover:text-red-700 p-1" title="Excluir"><i class="fas fa-trash"></i></button>
+                </td>`;
+            tbody.appendChild(row);
+        });
+
+        if (!filtradas.length) {
+            tbody.innerHTML = `<tr><td colspan="6" class="py-6 text-center text-gray-500">Nenhum lançamento registrado neste mês.</td></tr>`;
+        }
+
+        document.getElementById('resumo-total').innerText     = fmt(totalLiq);
+        document.getElementById('resumo-bruto').innerText     = fmt(totalBruto);
+        document.getElementById('resumo-combustivel').innerText = fmt(totalComb);
+        document.getElementById('resumo-outros').innerText    = fmt(totalOutros);
+        document.getElementById('resumo-hora').innerText = totalHoras > 0 ? fmt(totalLiq / totalHoras) : 'R$ 0,00';
+        document.getElementById('resumo-km').innerText   = totalKm > 0   ? fmt(totalLiq / totalKm)    : 'R$ 0,00';
+
+        const barra = document.getElementById('resumo-barra');
+        if (metaMensal > 0) {
+            const pct  = Math.max(0, (totalLiq / metaMensal) * 100);
+            const falta = metaMensal - totalLiq;
+            document.getElementById('resumo-progresso-txt').innerText = `${pct.toFixed(1)}%`;
+            barra.style.width = `${Math.min(pct, 100)}%`;
+            barra.classList.remove('progress-blue','progress-yellow','progress-green');
+            if (pct >= 100)     barra.classList.add('progress-green');
+            else if (pct >= 80) barra.classList.add('progress-yellow');
+            else                barra.classList.add('progress-blue');
+
+            const faltaEl = document.getElementById('resumo-falta');
+            if (falta > 0) { faltaEl.innerText = `Faltam: ${fmt(falta)}`; faltaEl.className = "text-xs text-red-500 mt-1"; }
+            else           { faltaEl.innerText = "🎉 Meta Atingida!";      faltaEl.className = "text-xs text-green-600 font-bold mt-1"; }
+        } else {
+            document.getElementById('resumo-progresso-txt').innerText = "0%";
+            barra.style.width = "0%";
+            const faltaEl = document.getElementById('resumo-falta');
+            faltaEl.innerText = "Defina uma meta acima";
+            faltaEl.className = "text-xs text-gray-500 mt-1";
+        }
+
+        renderCalendario(mes, filtradas);
+        renderGrafico(diasGraf, liqGraf);
+    }
+
+    // ── Calendário ────────────────────────────────────────────────
+    function renderCalendario(mes, filtradas) {
+        const [ano, m] = mes.split('-').map(Number);
+        const totalDias  = new Date(ano, m, 0).getDate();
+        const primeiroDia = new Date(ano, m - 1, 1).getDay();
+
+        const dadosPorDia = {};
+        const idPorDia = {};
+        filtradas.forEach(e => {
+            const d = parseInt(e.data.split('-')[2]);
+            dadosPorDia[d] = e;
+            idPorDia[d] = e.id;
+        });
+
+        const valores = Object.values(dadosPorDia).map(e => e.liquido);
+        const mediaDia = valores.length > 0 ? valores.reduce((a,b)=>a+b,0)/valores.length : 0;
+
+        const hojeAno = hoje.getFullYear(), hojeM = hoje.getMonth()+1, hojeD = hoje.getDate();
+        const cal = document.getElementById('calendario');
+        cal.innerHTML = '';
+
+        for (let i = 0; i < primeiroDia; i++) {
+            const c = document.createElement('div');
+            c.className = 'cal-day empty'; cal.appendChild(c);
+        }
+
+        for (let d = 1; d <= totalDias; d++) {
+            const cell = document.createElement('div');
+            const isFuture = (ano > hojeAno) || (ano === hojeAno && m > hojeM) || (ano === hojeAno && m === hojeM && d > hojeD);
+
+            if (isFuture) {
+                cell.className = 'cal-day future';
+                cell.innerHTML = `<span>${d}</span>`;
+            } else if (dadosPorDia[d] !== undefined) {
+                const e   = dadosPorDia[d];
+                const liq = e.liquido;
+                const h   = e.horas  || 0;
+                const km  = e.km     || 0;
+
+                const rPorHora = h  > 0 ? liq / h  : 0;
+                const rPorKm   = km > 0 ? liq / km : 0;
+
+                // Calibração KMPRO:
+                // Dias curtos (≤ 4h): bom se R$/h >= 25 OU R$/km >= 1,20
+                // Dias longos (> 4h): bom se líquido >= média do mês
+                let bom, motivo;
+                if (h <= 4) {
+                    bom = rPorHora >= 25 || rPorKm >= 1.2;
+                    motivo = bom
+                        ? `✅ ${fmt(rPorHora)}/h · ${fmt(rPorKm)}/km`
+                        : `⚠️ ${fmt(rPorHora)}/h · ${fmt(rPorKm)}/km`;
+                } else {
+                    bom = liq >= mediaDia;
+                    motivo = bom
+                        ? `✅ Acima da média (${fmt(mediaDia)})`
+                        : `⚠️ Abaixo da média (${fmt(mediaDia)})`;
+                }
+
+                cell.className = `cal-day clickable ${bom ? 'worked-good' : 'worked-bad'}`;
+                cell.innerHTML = `<span class="font-bold">${d}</span>`;
+                cell.title = `${d}/${m}: ${fmt(liq)} — ${motivo}`;
+                cell.onclick = () => abrirModalDia(idPorDia[d]);
+            } else {
+                cell.className = 'cal-day not-worked';
+                cell.innerHTML = `<span>${d}</span>`;
+            }
+            cal.appendChild(cell);
+        }
+    }
+
+    // ── Gráfico ───────────────────────────────────────────────────
+    function renderGrafico(labels, data) {
+        const ctx = document.getElementById('graficoFaturamento').getContext('2d');
+        if (chartInstance) chartInstance.destroy();
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    data,
+                    backgroundColor: data.map(v => v >= 0 ? 'rgba(34,197,94,0.75)' : 'rgba(239,68,68,0.75)'),
+                    borderColor:     data.map(v => v >= 0 ? 'rgb(22,163,74)'         : 'rgb(220,38,38)'),
+                    borderWidth: 1, borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                onClick: (_, elements) => {
+                    if (elements.length > 0) {
+                        const idx = elements[0].index;
+                        const mes = document.getElementById('filtro-mes').value;
+                        const filtradas = entradas.filter(e => e.data.startsWith(mes));
+                        if (filtradas[idx]) abrirModalDia(filtradas[idx].id);
+                    }
+                },
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => fmt(ctx.raw) } } }
+            }
+        });
+    }
+</script>
+
+<!-- Service Worker (PWA) -->
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => console.log('✅ KMPRO PWA registrado com sucesso.'))
+                .catch(err => console.log('SW erro:', err));
+        });
+    }
+</script>
+
+</body>
+</html>

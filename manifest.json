@@ -1,0 +1,24 @@
+{
+  "name": "KMPRO - Gestão Financeira para Motoristas",
+  "short_name": "KMPRO",
+  "description": "Sistema profissional de controle financeiro, horímetro e rentabilidade para motoristas de aplicativo.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
